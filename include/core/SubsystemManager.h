@@ -21,7 +21,7 @@ class SubsystemManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList subsystems READ getSubsystemsVariant NOTIFY subsystemsChanged)
     Q_PROPERTY(QVariantList activeSubsystems READ getActiveSubsystemsVariant NOTIFY activeSubsystemsChanged)
-    Q_PROPERTY(QString systemHealthState READ getSystemHealthState NOTIFY systemHealthChanged)
+    Q_PROPERTY(QString systemHealthState READ getSystemHealthStateString NOTIFY systemHealthChanged)
     Q_PROPERTY(double systemHealthScore READ getSystemHealthScore NOTIFY systemHealthChanged)
     Q_PROPERTY(int totalSubsystemCount READ getTotalSubsystemCount NOTIFY subsystemsChanged)
     Q_PROPERTY(int activeSubsystemCount READ getActiveSubsystemCount NOTIFY activeSubsystemsChanged)
