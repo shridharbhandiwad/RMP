@@ -14,9 +14,19 @@ Rectangle {
     
     color: RadarColors.background
     
-    // Grid background pattern
+    // Grid background pattern - only redraw on size changes
     Canvas {
+        id: gridCanvas
         anchors.fill: parent
+        
+        // Cache the rendered content
+        renderTarget: Canvas.Image
+        renderStrategy: Canvas.Threaded
+        
+        // Track size for repainting
+        property real lastWidth: 0
+        property real lastHeight: 0
+        
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
@@ -40,6 +50,22 @@ Rectangle {
                 ctx.moveTo(0, y)
                 ctx.lineTo(width, y)
                 ctx.stroke()
+            }
+            
+            lastWidth = width
+            lastHeight = height
+        }
+        
+        // Only request repaint when size actually changes
+        onWidthChanged: {
+            if (Math.abs(width - lastWidth) > 10) {
+                requestPaint()
+            }
+        }
+        
+        onHeightChanged: {
+            if (Math.abs(height - lastHeight) > 10) {
+                requestPaint()
             }
         }
     }

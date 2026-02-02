@@ -207,9 +207,19 @@ Rectangle {
                             id: progressCanvas
                             anchors.fill: parent
                             
-                            property real progress: subsystem ? subsystem.healthScore / 100 : 0
+                            // Cache the rendered content for better performance
+                            renderTarget: Canvas.Image
+                            renderStrategy: Canvas.Threaded
                             
-                            onProgressChanged: requestPaint()
+                            property real progress: subsystem ? subsystem.healthScore / 100 : 0
+                            property real lastPaintedProgress: -1
+                            
+                            // Only repaint when progress changes significantly (1% threshold)
+                            onProgressChanged: {
+                                if (Math.abs(progress - lastPaintedProgress) > 0.01) {
+                                    requestPaint()
+                                }
+                            }
                             
                             onPaint: {
                                 var ctx = getContext("2d")
@@ -233,6 +243,8 @@ Rectangle {
                                 ctx.lineWidth = 8
                                 ctx.lineCap = "round"
                                 ctx.stroke()
+                                
+                                lastPaintedProgress = progress
                             }
                         }
                     }
