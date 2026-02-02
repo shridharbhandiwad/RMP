@@ -1,0 +1,36 @@
+<RCC>
+    <qresource prefix="/">
+        <!-- Main Application -->
+        <file>qml/Main.qml</file>
+        
+        <!-- Components -->
+        <file>qml/components/SystemCanvas.qml</file>
+        <file>qml/components/SubsystemPalette.qml</file>
+        <file>qml/components/SubsystemModule.qml</file>
+        <file>qml/components/HealthIndicator.qml</file>
+        <file>qml/components/TelemetryDisplay.qml</file>
+        <file>qml/components/FaultList.qml</file>
+        
+        <!-- Subsystem Modules -->
+        <file>qml/modules/TransmitterModule.qml</file>
+        <file>qml/modules/ReceiverModule.qml</file>
+        <file>qml/modules/AntennaServoModule.qml</file>
+        <file>qml/modules/RFFrontEndModule.qml</file>
+        <file>qml/modules/SignalProcessorModule.qml</file>
+        <file>qml/modules/DataProcessorModule.qml</file>
+        <file>qml/modules/PowerSupplyModule.qml</file>
+        <file>qml/modules/CoolingModule.qml</file>
+        <file>qml/modules/TimingSyncModule.qml</file>
+        <file>qml/modules/NetworkInterfaceModule.qml</file>
+        
+        <!-- Panels -->
+        <file>qml/panels/DetailedHealthPanel.qml</file>
+        <file>qml/panels/AnalyticsPanel.qml</file>
+        <file>qml/panels/SystemOverviewPanel.qml</file>
+        <file>qml/panels/FaultHistoryPanel.qml</file>
+        
+        <!-- Styles -->
+        <file>qml/styles/RadarTheme.qml</file>
+        <file>qml/styles/RadarColors.qml</file>
+    </qresource>
+</RCC>

@@ -99,7 +99,7 @@ set(ANALYTICS_HEADERS
 )
 
 # QML Resources
-qt_add_resources(QML_RESOURCES resources/qml.qrc)
+qt_add_resources(QML_RESOURCES qml.qrc)
 
 # Main executable
 add_executable(${PROJECT_NAME}
