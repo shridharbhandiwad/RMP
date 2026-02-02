@@ -108,7 +108,7 @@ SOURCES += \
 #-------------------------------------------------
 
 RESOURCES += \
-    resources/qml.qrc
+    qml.qrc
 
 #-------------------------------------------------
 # QML Files (for IDE support)
