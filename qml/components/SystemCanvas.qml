@@ -186,16 +186,25 @@ Rectangle {
     // Drop area for drag-and-drop
     DropArea {
         anchors.fill: parent
+        keys: ["subsystemId"]
         
         onDropped: function(drop) {
-            if (drop.hasText || drop.keys.indexOf("subsystemId") >= 0) {
-                var subsystemId = drop.text || drop.getDataAsString("subsystemId")
+            var subsystemId = ""
+            if (drop.source && drop.source.subsystemId) {
+                subsystemId = drop.source.subsystemId
+            } else if (drop.hasText) {
+                subsystemId = drop.text
+            } else if (drop.keys.indexOf("subsystemId") >= 0) {
+                subsystemId = drop.getDataAsString("subsystemId")
+            }
+            
+            if (subsystemId && subsystemId.length > 0) {
                 subsystemManager.addToCanvas(subsystemId)
             }
         }
         
         onEntered: function(drag) {
-            drag.accepted = true
+            drag.accepted = drag.keys.indexOf("subsystemId") >= 0 || drag.hasText
         }
     }
     

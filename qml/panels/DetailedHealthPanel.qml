@@ -354,7 +354,7 @@ Rectangle {
         TelemetryDisplay {
             anchors.fill: parent
             anchors.margins: RadarTheme.spacingMedium
-            telemetryData: subsystem ? subsystem.telemetry : ({})
+            telemetryData: (subsystem && subsystem.telemetry) ? subsystem.telemetry : null
             maxItems: 20
         }
     }
@@ -367,7 +367,7 @@ Rectangle {
         FaultList {
             anchors.fill: parent
             anchors.margins: RadarTheme.spacingMedium
-            faults: subsystem ? subsystem.faults : []
+            faults: (subsystem && subsystem.faults) ? subsystem.faults : []
         }
     }
     

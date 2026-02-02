@@ -25,6 +25,9 @@ class SubsystemManager : public QObject {
     Q_PROPERTY(double systemHealthScore READ getSystemHealthScore NOTIFY systemHealthChanged)
     Q_PROPERTY(int totalSubsystemCount READ getTotalSubsystemCount NOTIFY subsystemsChanged)
     Q_PROPERTY(int activeSubsystemCount READ getActiveSubsystemCount NOTIFY activeSubsystemsChanged)
+    Q_PROPERTY(int healthySubsystemCount READ getHealthySubsystemCount NOTIFY systemHealthChanged)
+    Q_PROPERTY(int degradedSubsystemCount READ getDegradedSubsystemCount NOTIFY systemHealthChanged)
+    Q_PROPERTY(int failedSubsystemCount READ getFailedSubsystemCount NOTIFY systemHealthChanged)
     Q_PROPERTY(FaultManager* faultManager READ getFaultManager CONSTANT)
     
 public:

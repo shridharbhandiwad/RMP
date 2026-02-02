@@ -57,6 +57,7 @@ Rectangle {
         
         // Fault list
         ListView {
+            id: faultListView
             Layout.fillWidth: true
             Layout.fillHeight: true
             
@@ -65,7 +66,7 @@ Rectangle {
             clip: true
             
             delegate: FaultItem {
-                width: parent ? parent.width : 200
+                width: faultListView.width
                 fault: modelData
                 showClear: showClearButton
                 

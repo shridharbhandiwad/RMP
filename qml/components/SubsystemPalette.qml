@@ -206,38 +206,54 @@ Rectangle {
             anchors.fill: parent
             hoverEnabled: true
             
+            property bool dragActive: false
+            property point dragStartPos
+            
             onClicked: {
-                if (!subsystemData.onCanvas) {
+                if (!subsystemData.onCanvas && !dragActive) {
                     paletteItem.addToCanvas()
                 }
+                dragActive = false
             }
             
-            // Drag support
-            drag.target: dragProxy
+            onPressed: function(mouse) {
+                dragStartPos = Qt.point(mouse.x, mouse.y)
+                dragActive = false
+            }
             
-            onPressed: {
-                if (!subsystemData.onCanvas) {
-                    dragProxy.visible = true
-                    dragProxy.Drag.active = true
+            onPositionChanged: function(mouse) {
+                if (!subsystemData.onCanvas && pressed) {
+                    var dx = mouse.x - dragStartPos.x
+                    var dy = mouse.y - dragStartPos.y
+                    if (Math.sqrt(dx*dx + dy*dy) > 10) {
+                        dragActive = true
+                        dragProxy.Drag.active = true
+                    }
                 }
             }
             
             onReleased: {
-                dragProxy.visible = false
+                if (dragProxy.Drag.active) {
+                    dragProxy.Drag.drop()
+                }
                 dragProxy.Drag.active = false
-                dragProxy.x = 0
-                dragProxy.y = 0
             }
         }
         
-        // Drag proxy
+        // Drag proxy - using Internal drag type for manual control
         Item {
             id: dragProxy
-            visible: false
+            x: mouseArea.mouseX - 20
+            y: mouseArea.mouseY - 20
+            width: 40
+            height: 40
             
-            Drag.dragType: Drag.Automatic
+            Drag.dragType: Drag.Internal
             Drag.supportedActions: Qt.CopyAction
-            Drag.mimeData: { "subsystemId": subsystemData.id }
+            Drag.keys: ["subsystemId"]
+            
+            property string subsystemId: subsystemData ? subsystemData.id : ""
+            Drag.mimeData: ({ "text/plain": subsystemId, "subsystemId": subsystemId })
         }
         
         RowLayout {
