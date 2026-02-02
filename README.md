@@ -205,10 +205,10 @@ RadarMaintenanceProcessor/
   - Qt Quick Controls 2
   - Qt Charts
   - Qt Network
-- **CMake 3.16+**
+- **qmake** (included with Qt)
 - **C++17** compatible compiler
 
-### Building
+### Building with qmake
 
 ```bash
 # Clone the repository
@@ -218,15 +218,30 @@ cd RadarMaintenanceProcessor
 # Create build directory
 mkdir build && cd build
 
-# Configure with CMake
-cmake ..
+# Run qmake
+qmake ../RadarMaintenanceProcessor.pro
 
-# Build
-cmake --build . -j$(nproc)
+# Build (Linux/macOS)
+make -j$(nproc)
+
+# Build (Windows with MSVC)
+nmake
+
+# Build (Windows with MinGW)
+mingw32-make
 
 # Run
-./RadarMaintenanceProcessor
+./RadarMaintenanceProcessor      # Linux/macOS
+RadarMaintenanceProcessor.exe    # Windows
 ```
+
+### Building with Qt Creator
+
+1. Open Qt Creator
+2. File → Open File or Project
+3. Select `RadarMaintenanceProcessor.pro`
+4. Configure the project with your Qt kit
+5. Click Build (Ctrl+B) or Run (Ctrl+R)
 
 ### Qt Installation (Ubuntu/Debian)
 
@@ -235,7 +250,26 @@ cmake --build . -j$(nproc)
 sudo apt update
 sudo apt install qt6-base-dev qt6-declarative-dev \
                  qt6-quickcontrols2-dev qt6-charts-dev \
-                 libqt6network6 cmake build-essential
+                 libqt6network6 build-essential
+```
+
+### Qt Installation (Windows)
+
+1. Download Qt Online Installer from [qt.io](https://www.qt.io/download)
+2. Install Qt 6.x with:
+   - Qt 6.x.x (select your compiler: MSVC or MinGW)
+   - Qt Quick
+   - Qt Charts
+3. Add Qt bin directory to PATH
+
+### Qt Installation (macOS)
+
+```bash
+# Using Homebrew
+brew install qt@6
+
+# Add to PATH
+export PATH="/opt/homebrew/opt/qt@6/bin:$PATH"
 ```
 
 ---
