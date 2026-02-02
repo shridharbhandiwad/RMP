@@ -206,54 +206,43 @@ Rectangle {
             anchors.fill: parent
             hoverEnabled: true
             
-            property bool dragActive: false
-            property point dragStartPos
+            drag.target: !subsystemData.onCanvas ? dragProxy : null
+            drag.threshold: 10
             
             onClicked: {
-                if (!subsystemData.onCanvas && !dragActive) {
+                if (!subsystemData.onCanvas && !drag.active) {
                     paletteItem.addToCanvas()
                 }
-                dragActive = false
-            }
-            
-            onPressed: function(mouse) {
-                dragStartPos = Qt.point(mouse.x, mouse.y)
-                dragActive = false
-            }
-            
-            onPositionChanged: function(mouse) {
-                if (!subsystemData.onCanvas && pressed) {
-                    var dx = mouse.x - dragStartPos.x
-                    var dy = mouse.y - dragStartPos.y
-                    if (Math.sqrt(dx*dx + dy*dy) > 10) {
-                        dragActive = true
-                        dragProxy.Drag.active = true
-                    }
-                }
-            }
-            
-            onReleased: {
-                if (dragProxy.Drag.active) {
-                    dragProxy.Drag.drop()
-                }
-                dragProxy.Drag.active = false
             }
         }
         
-        // Drag proxy - using Internal drag type for manual control
-        Item {
+        // Drag proxy - using Automatic drag type for proper handling
+        Rectangle {
             id: dragProxy
-            x: mouseArea.mouseX - 20
-            y: mouseArea.mouseY - 20
-            width: 40
-            height: 40
+            width: 48
+            height: 48
+            radius: RadarTheme.radiusMedium
+            color: RadarColors.getHealthGlowColor(subsystemData.healthState)
+            border.color: RadarColors.getHealthColor(subsystemData.healthState)
+            border.width: 2
+            visible: Drag.active
+            opacity: 0.8
             
-            Drag.dragType: Drag.Internal
+            Drag.active: mouseArea.drag.active
+            Drag.dragType: Drag.Automatic
             Drag.supportedActions: Qt.CopyAction
             Drag.keys: ["subsystemId"]
+            Drag.hotSpot.x: width / 2
+            Drag.hotSpot.y: height / 2
             
             property string subsystemId: subsystemData ? subsystemData.id : ""
             Drag.mimeData: ({ "text/plain": subsystemId, "subsystemId": subsystemId })
+            
+            Text {
+                anchors.centerIn: parent
+                text: getSubsystemIcon(subsystemData.type)
+                font.pixelSize: 20
+            }
         }
         
         RowLayout {
