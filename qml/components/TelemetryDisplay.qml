@@ -8,9 +8,12 @@ import "../styles"
 Item {
     id: display
     
-    property var telemetryData: ({})
-    property var metadata: ({})
+    property var telemetryData: null
+    property var metadata: null
     property int maxItems: 8
+    
+    // Cache the keys to avoid regenerating the model constantly
+    property var telemetryKeys: telemetryData ? Object.keys(telemetryData).slice(0, maxItems) : []
     
     implicitHeight: telemetryColumn.implicitHeight
     
@@ -20,23 +23,13 @@ Item {
         spacing: RadarTheme.spacingSmall
         
         Repeater {
-            model: {
-                var items = []
-                var keys = Object.keys(telemetryData)
-                for (var i = 0; i < Math.min(keys.length, maxItems); i++) {
-                    items.push({
-                        key: keys[i],
-                        value: telemetryData[keys[i]]
-                    })
-                }
-                return items
-            }
+            model: display.telemetryKeys
             
             TelemetryItem {
                 Layout.fillWidth: true
-                paramName: modelData.key
-                paramValue: modelData.value
-                paramMetadata: metadata[modelData.key] || {}
+                paramName: modelData
+                paramValue: display.telemetryData ? display.telemetryData[modelData] : null
+                paramMetadata: (display.metadata && display.metadata[modelData]) ? display.metadata[modelData] : null
             }
         }
     }
@@ -101,7 +94,7 @@ Item {
             // Unit
             Text {
                 Layout.preferredWidth: 40
-                text: paramMetadata.unit || ""
+                text: (paramMetadata && paramMetadata.unit) ? paramMetadata.unit : ""
                 font.family: RadarTheme.fontFamily
                 font.pixelSize: RadarTheme.fontSizeXSmall
                 color: RadarColors.textTertiary
@@ -109,6 +102,7 @@ Item {
         }
         
         function formatParamName(name) {
+            if (!name) return ""
             // Convert camelCase to Title Case
             return name.replace(/([A-Z])/g, ' $1').replace(/^./, function(str) {
                 return str.toUpperCase()
@@ -116,6 +110,9 @@ Item {
         }
         
         function formatValue(value) {
+            if (value === null || value === undefined) {
+                return "-"
+            }
             if (typeof value === 'number') {
                 return value.toFixed(2)
             } else if (typeof value === 'boolean') {
@@ -125,21 +122,26 @@ Item {
         }
         
         function isNumeric(value) {
-            return typeof value === 'number'
+            return typeof value === 'number' && !isNaN(value)
         }
         
         function getValueRatio() {
             if (!isNumeric(paramValue)) return 0
             
-            var min = paramMetadata.minValue !== undefined ? paramMetadata.minValue : 0
-            var max = paramMetadata.maxValue !== undefined ? paramMetadata.maxValue : 100
+            var min = (paramMetadata && paramMetadata.minValue !== undefined) ? paramMetadata.minValue : 0
+            var max = (paramMetadata && paramMetadata.maxValue !== undefined) ? paramMetadata.maxValue : 100
             
+            if (max === min) return 0.5
             return Math.max(0, Math.min(1, (paramValue - min) / (max - min)))
         }
         
         function getValueColor() {
             if (!isNumeric(paramValue)) {
                 return RadarColors.textPrimary
+            }
+            
+            if (!paramMetadata) {
+                return RadarColors.telemetryPrimary
             }
             
             // Check against thresholds
