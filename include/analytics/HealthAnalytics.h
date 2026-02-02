@@ -5,6 +5,7 @@
 #include <QMap>
 #include <QDateTime>
 #include <QVariantList>
+#include <QTimer>
 #include "core/HealthStatus.h"
 
 namespace RadarRMP {

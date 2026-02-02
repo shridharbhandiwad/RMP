@@ -1,36 +1,36 @@
 <RCC>
     <qresource prefix="/">
         <!-- Main Application -->
-        <file>qml/Main.qml</file>
+        <file alias="qml/Main.qml">../qml/Main.qml</file>
         
         <!-- Components -->
-        <file>qml/components/SystemCanvas.qml</file>
-        <file>qml/components/SubsystemPalette.qml</file>
-        <file>qml/components/SubsystemModule.qml</file>
-        <file>qml/components/HealthIndicator.qml</file>
-        <file>qml/components/TelemetryDisplay.qml</file>
-        <file>qml/components/FaultList.qml</file>
+        <file alias="qml/components/SystemCanvas.qml">../qml/components/SystemCanvas.qml</file>
+        <file alias="qml/components/SubsystemPalette.qml">../qml/components/SubsystemPalette.qml</file>
+        <file alias="qml/components/SubsystemModule.qml">../qml/components/SubsystemModule.qml</file>
+        <file alias="qml/components/HealthIndicator.qml">../qml/components/HealthIndicator.qml</file>
+        <file alias="qml/components/TelemetryDisplay.qml">../qml/components/TelemetryDisplay.qml</file>
+        <file alias="qml/components/FaultList.qml">../qml/components/FaultList.qml</file>
         
         <!-- Subsystem Modules -->
-        <file>qml/modules/TransmitterModule.qml</file>
-        <file>qml/modules/ReceiverModule.qml</file>
-        <file>qml/modules/AntennaServoModule.qml</file>
-        <file>qml/modules/RFFrontEndModule.qml</file>
-        <file>qml/modules/SignalProcessorModule.qml</file>
-        <file>qml/modules/DataProcessorModule.qml</file>
-        <file>qml/modules/PowerSupplyModule.qml</file>
-        <file>qml/modules/CoolingModule.qml</file>
-        <file>qml/modules/TimingSyncModule.qml</file>
-        <file>qml/modules/NetworkInterfaceModule.qml</file>
+        <file alias="qml/modules/TransmitterModule.qml">../qml/modules/TransmitterModule.qml</file>
+        <file alias="qml/modules/ReceiverModule.qml">../qml/modules/ReceiverModule.qml</file>
+        <file alias="qml/modules/AntennaServoModule.qml">../qml/modules/AntennaServoModule.qml</file>
+        <file alias="qml/modules/RFFrontEndModule.qml">../qml/modules/RFFrontEndModule.qml</file>
+        <file alias="qml/modules/SignalProcessorModule.qml">../qml/modules/SignalProcessorModule.qml</file>
+        <file alias="qml/modules/DataProcessorModule.qml">../qml/modules/DataProcessorModule.qml</file>
+        <file alias="qml/modules/PowerSupplyModule.qml">../qml/modules/PowerSupplyModule.qml</file>
+        <file alias="qml/modules/CoolingModule.qml">../qml/modules/CoolingModule.qml</file>
+        <file alias="qml/modules/TimingSyncModule.qml">../qml/modules/TimingSyncModule.qml</file>
+        <file alias="qml/modules/NetworkInterfaceModule.qml">../qml/modules/NetworkInterfaceModule.qml</file>
         
         <!-- Panels -->
-        <file>qml/panels/DetailedHealthPanel.qml</file>
-        <file>qml/panels/AnalyticsPanel.qml</file>
-        <file>qml/panels/SystemOverviewPanel.qml</file>
-        <file>qml/panels/FaultHistoryPanel.qml</file>
+        <file alias="qml/panels/DetailedHealthPanel.qml">../qml/panels/DetailedHealthPanel.qml</file>
+        <file alias="qml/panels/AnalyticsPanel.qml">../qml/panels/AnalyticsPanel.qml</file>
+        <file alias="qml/panels/SystemOverviewPanel.qml">../qml/panels/SystemOverviewPanel.qml</file>
+        <file alias="qml/panels/FaultHistoryPanel.qml">../qml/panels/FaultHistoryPanel.qml</file>
         
         <!-- Styles -->
-        <file>qml/styles/RadarTheme.qml</file>
-        <file>qml/styles/RadarColors.qml</file>
+        <file alias="qml/styles/RadarTheme.qml">../qml/styles/RadarTheme.qml</file>
+        <file alias="qml/styles/RadarColors.qml">../qml/styles/RadarColors.qml</file>
     </qresource>
 </RCC>

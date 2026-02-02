@@ -90,6 +90,7 @@ private:
     QMap<QString, ParameterConfig> m_parameters;
     QMap<QString, double> m_currentValues;
     QMap<QString, double> m_accumulatedTrend;
+    int m_windowSize;
     
     // Anomaly state
     struct Anomaly {

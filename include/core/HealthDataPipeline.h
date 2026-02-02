@@ -6,6 +6,7 @@
 #include <QQueue>
 #include <QMutex>
 #include <QThread>
+#include <QTimer>
 #include "HealthStatus.h"
 
 namespace RadarRMP {
