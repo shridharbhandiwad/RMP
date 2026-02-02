@@ -1,6 +1,7 @@
 #include "core/HealthDataPipeline.h"
 #include <QTimer>
 #include <QThread>
+#include <cmath>
 
 namespace RadarRMP {
 

@@ -17,6 +17,7 @@ struct TelemetryParameter {
     QString displayName;    // Human-readable name
     QString unit;           // Unit of measurement
     QVariant value;         // Current value
+    QVariant nominal;       // Nominal/expected value
     QVariant minValue;      // Minimum valid value
     QVariant maxValue;      // Maximum valid value
     QVariant warningLow;    // Low warning threshold
@@ -38,6 +39,7 @@ struct TelemetryParameter {
         map["displayName"] = displayName;
         map["unit"] = unit;
         map["value"] = value;
+        map["nominal"] = nominal;
         map["minValue"] = minValue;
         map["maxValue"] = maxValue;
         map["warningLow"] = warningLow;

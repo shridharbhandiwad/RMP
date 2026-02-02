@@ -179,163 +179,163 @@ Rectangle {
             color: RadarColors.textPrimary
         }
     }
-}
-
-/**
- * Individual subsystem item in the palette
- */
-component SubsystemPaletteItem: Rectangle {
-    id: paletteItem
     
-    property var subsystemData
-    signal addToCanvas()
-    
-    height: 72
-    radius: RadarTheme.radiusMedium
-    color: mouseArea.containsMouse ? RadarColors.surfaceHover : RadarColors.surface
-    border.color: subsystemData.onCanvas ? RadarColors.accent : RadarColors.border
-    border.width: subsystemData.onCanvas ? 2 : 1
-    
-    opacity: subsystemData.onCanvas ? 0.6 : 1.0
-    
-    Behavior on color {
-        ColorAnimation { duration: RadarTheme.animationFast }
-    }
-    
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
+    /**
+     * Individual subsystem item in the palette
+     */
+    component SubsystemPaletteItem: Rectangle {
+        id: paletteItem
         
-        onClicked: {
-            if (!subsystemData.onCanvas) {
-                paletteItem.addToCanvas()
+        property var subsystemData
+        signal addToCanvas()
+        
+        height: 72
+        radius: RadarTheme.radiusMedium
+        color: mouseArea.containsMouse ? RadarColors.surfaceHover : RadarColors.surface
+        border.color: subsystemData.onCanvas ? RadarColors.accent : RadarColors.border
+        border.width: subsystemData.onCanvas ? 2 : 1
+        
+        opacity: subsystemData.onCanvas ? 0.6 : 1.0
+        
+        Behavior on color {
+            ColorAnimation { duration: RadarTheme.animationFast }
+        }
+        
+        MouseArea {
+            id: mouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            
+            onClicked: {
+                if (!subsystemData.onCanvas) {
+                    paletteItem.addToCanvas()
+                }
+            }
+            
+            // Drag support
+            drag.target: dragProxy
+            
+            onPressed: {
+                if (!subsystemData.onCanvas) {
+                    dragProxy.visible = true
+                    dragProxy.Drag.active = true
+                }
+            }
+            
+            onReleased: {
+                dragProxy.visible = false
+                dragProxy.Drag.active = false
+                dragProxy.x = 0
+                dragProxy.y = 0
             }
         }
         
-        // Drag support
-        drag.target: dragProxy
-        
-        onPressed: {
-            if (!subsystemData.onCanvas) {
-                dragProxy.visible = true
-                dragProxy.Drag.active = true
-            }
+        // Drag proxy
+        Item {
+            id: dragProxy
+            visible: false
+            
+            Drag.dragType: Drag.Automatic
+            Drag.supportedActions: Qt.CopyAction
+            Drag.mimeData: { "subsystemId": subsystemData.id }
         }
         
-        onReleased: {
-            dragProxy.visible = false
-            dragProxy.Drag.active = false
-            dragProxy.x = 0
-            dragProxy.y = 0
-        }
-    }
-    
-    // Drag proxy
-    Item {
-        id: dragProxy
-        visible: false
-        
-        Drag.dragType: Drag.Automatic
-        Drag.supportedActions: Qt.CopyAction
-        Drag.mimeData: { "subsystemId": subsystemData.id }
-    }
-    
-    RowLayout {
-        anchors.fill: parent
-        anchors.margins: RadarTheme.spacingMedium
-        spacing: RadarTheme.spacingMedium
-        
-        // Health indicator and icon
-        Rectangle {
-            width: 48
-            height: 48
-            radius: RadarTheme.radiusMedium
-            color: RadarColors.getHealthGlowColor(subsystemData.healthState)
-            border.color: RadarColors.getHealthColor(subsystemData.healthState)
-            border.width: 2
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: RadarTheme.spacingMedium
+            spacing: RadarTheme.spacingMedium
             
-            Text {
-                anchors.centerIn: parent
-                text: getSubsystemIcon(subsystemData.type)
-                font.pixelSize: 20
-            }
-        }
-        
-        // Info
-        Column {
-            Layout.fillWidth: true
-            spacing: 2
-            
-            Text {
-                text: subsystemData.name
-                font.family: RadarTheme.fontFamily
-                font.pixelSize: RadarTheme.fontSizeMedium
-                font.weight: Font.Medium
-                color: RadarColors.textPrimary
-                elide: Text.ElideRight
-                width: parent.width
-            }
-            
-            Text {
-                text: subsystemData.type
-                font.family: RadarTheme.fontFamily
-                font.pixelSize: RadarTheme.fontSizeSmall
-                color: RadarColors.textTertiary
-            }
-            
-            Row {
-                spacing: RadarTheme.spacingSmall
+            // Health indicator and icon
+            Rectangle {
+                width: 48
+                height: 48
+                radius: RadarTheme.radiusMedium
+                color: RadarColors.getHealthGlowColor(subsystemData.healthState)
+                border.color: RadarColors.getHealthColor(subsystemData.healthState)
+                border.width: 2
                 
-                Rectangle {
-                    width: 8
-                    height: 8
-                    radius: 4
-                    color: RadarColors.getHealthColor(subsystemData.healthState)
+                Text {
+                    anchors.centerIn: parent
+                    text: getSubsystemIcon(subsystemData.type)
+                    font.pixelSize: 20
+                }
+            }
+            
+            // Info
+            Column {
+                Layout.fillWidth: true
+                spacing: 2
+                
+                Text {
+                    text: subsystemData.name
+                    font.family: RadarTheme.fontFamily
+                    font.pixelSize: RadarTheme.fontSizeMedium
+                    font.weight: Font.Medium
+                    color: RadarColors.textPrimary
+                    elide: Text.ElideRight
+                    width: parent.width
                 }
                 
                 Text {
-                    text: subsystemData.healthState + " - " + subsystemData.healthScore.toFixed(0) + "%"
+                    text: subsystemData.type
                     font.family: RadarTheme.fontFamily
-                    font.pixelSize: RadarTheme.fontSizeXSmall
-                    color: RadarColors.getHealthColor(subsystemData.healthState)
+                    font.pixelSize: RadarTheme.fontSizeSmall
+                    color: RadarColors.textTertiary
+                }
+                
+                Row {
+                    spacing: RadarTheme.spacingSmall
+                    
+                    Rectangle {
+                        width: 8
+                        height: 8
+                        radius: 4
+                        color: RadarColors.getHealthColor(subsystemData.healthState)
+                    }
+                    
+                    Text {
+                        text: subsystemData.healthState + " - " + subsystemData.healthScore.toFixed(0) + "%"
+                        font.family: RadarTheme.fontFamily
+                        font.pixelSize: RadarTheme.fontSizeXSmall
+                        color: RadarColors.getHealthColor(subsystemData.healthState)
+                    }
+                }
+            }
+            
+            // Status / Add button
+            Rectangle {
+                width: 28
+                height: 28
+                radius: 14
+                color: subsystemData.onCanvas ? RadarColors.accent : "transparent"
+                border.color: subsystemData.onCanvas ? RadarColors.accent : RadarColors.border
+                border.width: 1
+                visible: !subsystemData.onCanvas || mouseArea.containsMouse
+                
+                Text {
+                    anchors.centerIn: parent
+                    text: subsystemData.onCanvas ? "✓" : "+"
+                    font.pixelSize: 14
+                    font.bold: true
+                    color: subsystemData.onCanvas ? RadarColors.background : RadarColors.textSecondary
                 }
             }
         }
         
-        // Status / Add button
-        Rectangle {
-            width: 28
-            height: 28
-            radius: 14
-            color: subsystemData.onCanvas ? RadarColors.accent : "transparent"
-            border.color: subsystemData.onCanvas ? RadarColors.accent : RadarColors.border
-            border.width: 1
-            visible: !subsystemData.onCanvas || mouseArea.containsMouse
-            
-            Text {
-                anchors.centerIn: parent
-                text: subsystemData.onCanvas ? "✓" : "+"
-                font.pixelSize: 14
-                font.bold: true
-                color: subsystemData.onCanvas ? RadarColors.background : RadarColors.textSecondary
+        function getSubsystemIcon(type) {
+            switch(type) {
+                case "Transmitter": return "📡"
+                case "Receiver": return "📻"
+                case "Antenna & Servo": return "🎯"
+                case "RF Front-End": return "📶"
+                case "Signal Processor": return "🔬"
+                case "Data Processor": return "💻"
+                case "Power Supply": return "⚡"
+                case "Cooling System": return "❄️"
+                case "Timing & Sync": return "⏱️"
+                case "Network Interface": return "🌐"
+                default: return "❓"
             }
-        }
-    }
-    
-    function getSubsystemIcon(type) {
-        switch(type) {
-            case "Transmitter": return "📡"
-            case "Receiver": return "📻"
-            case "Antenna & Servo": return "🎯"
-            case "RF Front-End": return "📶"
-            case "Signal Processor": return "🔬"
-            case "Data Processor": return "💻"
-            case "Power Supply": return "⚡"
-            case "Cooling System": return "❄️"
-            case "Timing & Sync": return "⏱️"
-            case "Network Interface": return "🌐"
-            default: return "❓"
         }
     }
 }
