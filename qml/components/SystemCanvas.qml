@@ -217,26 +217,41 @@ Rectangle {
     
     // Drop area for drag-and-drop
     DropArea {
+        id: canvasDropArea
         anchors.fill: parent
         keys: ["subsystemId"]
         
+        // Visual feedback during drag
+        Rectangle {
+            anchors.fill: parent
+            color: RadarColors.accent
+            opacity: parent.containsDrag ? 0.1 : 0
+            visible: parent.containsDrag
+            
+            Behavior on opacity {
+                NumberAnimation { duration: 150 }
+            }
+        }
+        
         onDropped: function(drop) {
             var subsystemId = ""
-            if (drop.source && drop.source.subsystemId) {
+            
+            // Primary method: get from drag source property (Internal drag)
+            if (drop.source && typeof drop.source.subsystemId === "string") {
                 subsystemId = drop.source.subsystemId
-            } else if (drop.hasText) {
-                subsystemId = drop.text
-            } else if (drop.keys.indexOf("subsystemId") >= 0) {
-                subsystemId = drop.getDataAsString("subsystemId")
             }
             
             if (subsystemId && subsystemId.length > 0) {
                 subsystemManager.addToCanvas(subsystemId)
+                drop.accept(Qt.CopyAction)
             }
         }
         
         onEntered: function(drag) {
-            drag.accepted = drag.keys.indexOf("subsystemId") >= 0 || drag.hasText
+            // Accept if source has subsystemId property or keys contain subsystemId
+            var hasSubsystemId = (drag.source && typeof drag.source.subsystemId === "string")
+            var hasKey = drag.keys && drag.keys.indexOf("subsystemId") >= 0
+            drag.accepted = hasSubsystemId || hasKey
         }
     }
     
