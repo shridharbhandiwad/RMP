@@ -30,8 +30,8 @@ struct TelemetryParameter {
     TelemetryParameter() : isValid(false) {}
     
     TelemetryParameter(const QString& n, const QString& dn, const QString& u)
-        : name(n), displayName(dn), unit(u), isValid(true),
-          timestamp(QDateTime::currentDateTime()) {}
+        : name(n), displayName(dn), unit(u),
+          timestamp(QDateTime::currentDateTime()), isValid(true) {}
     
     QVariantMap toVariantMap() const {
         QVariantMap map;
