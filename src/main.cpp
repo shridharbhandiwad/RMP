@@ -5,6 +5,7 @@
 #include <QtQml>
 
 #include "core/SubsystemManager.h"
+#include "core/SubsystemListModel.h"
 #include "core/HealthDataPipeline.h"
 #include "core/FaultManager.h"
 
@@ -44,6 +45,12 @@ int main(int argc, char *argv[])
     qRegisterMetaType<RadarRMP::FaultSeverity>("RadarRMP::FaultSeverity");
     qRegisterMetaType<RadarRMP::SubsystemType>("RadarRMP::SubsystemType");
     qRegisterMetaType<RadarRMP::FaultCode>("RadarRMP::FaultCode");
+    
+    // Register QML types for model access
+    qmlRegisterUncreatableType<RadarRMP::SubsystemListModel>("RadarRMP", 1, 0, "SubsystemListModel",
+        "SubsystemListModel is managed by SubsystemManager");
+    qmlRegisterUncreatableType<RadarRMP::ActiveSubsystemModel>("RadarRMP", 1, 0, "ActiveSubsystemModel",
+        "ActiveSubsystemModel is managed by SubsystemManager");
     
     // Create subsystem manager
     SubsystemManager* subsystemManager = new SubsystemManager();
@@ -135,11 +142,9 @@ int main(int argc, char *argv[])
     
     engine.load(url);
     
-    // Start the simulator
+    // Start the simulator - this now drives all updates
+    // SubsystemManager uses throttled updates triggered by subsystem signals
     simulator->start();
-    
-    // Start subsystem manager updates
-    subsystemManager->startUpdates();
     
     return app.exec();
 }

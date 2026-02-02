@@ -78,15 +78,30 @@ void TelemetryData::setValue(const QString& name, const QVariant& value)
 
 void TelemetryData::setValues(const QVariantMap& values)
 {
+    if (values.isEmpty()) {
+        return;
+    }
+    
+    bool anyChanged = false;
+    QDateTime now = QDateTime::currentDateTime();
+    
     for (auto it = values.begin(); it != values.end(); ++it) {
         if (m_parameters.contains(it.key())) {
             TelemetryParameter& param = m_parameters[it.key()];
-            param.value = it.value();
-            param.timestamp = QDateTime::currentDateTime();
+            // Only update if value actually changed
+            if (param.value != it.value()) {
+                param.value = it.value();
+                param.timestamp = now;
+                anyChanged = true;
+            }
         }
     }
-    m_lastUpdate = QDateTime::currentDateTime();
-    emit dataChanged();
+    
+    // Only emit signal if something actually changed
+    if (anyChanged) {
+        m_lastUpdate = now;
+        emit dataChanged();
+    }
 }
 
 bool TelemetryData::isWithinLimits(const QString& name) const

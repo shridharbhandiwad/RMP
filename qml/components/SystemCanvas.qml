@@ -14,9 +14,19 @@ Rectangle {
     
     color: RadarColors.background
     
-    // Grid background pattern
+    // Grid background pattern - only redraw on size changes
     Canvas {
+        id: gridCanvas
         anchors.fill: parent
+        
+        // Cache the rendered content
+        renderTarget: Canvas.Image
+        renderStrategy: Canvas.Threaded
+        
+        // Track size for repainting
+        property real lastWidth: 0
+        property real lastHeight: 0
+        
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
@@ -40,6 +50,22 @@ Rectangle {
                 ctx.moveTo(0, y)
                 ctx.lineTo(width, y)
                 ctx.stroke()
+            }
+            
+            lastWidth = width
+            lastHeight = height
+        }
+        
+        // Only request repaint when size actually changes
+        onWidthChanged: {
+            if (Math.abs(width - lastWidth) > 10) {
+                requestPaint()
+            }
+        }
+        
+        onHeightChanged: {
+            if (Math.abs(height - lastHeight) > 10) {
+                requestPaint()
             }
         }
     }
@@ -112,7 +138,7 @@ Rectangle {
         }
     }
     
-    // Module container with FlowLayout
+    // Module container with FlowLayout - using proper model for efficient updates
     Flickable {
         id: moduleContainer
         anchors.top: canvasHeader.bottom
@@ -132,17 +158,23 @@ Rectangle {
             
             Repeater {
                 id: moduleRepeater
-                model: subsystemManager.activeSubsystems
+                model: subsystemManager.activeSubsystemModel
                 
                 SubsystemModule {
-                    subsystemData: modelData
+                    // Use model roles directly for efficient binding
+                    subsystemId: model.id
+                    subsystemName: model.name
+                    subsystemType: model.type
+                    subsystemHealthState: model.healthState
+                    subsystemHealthScore: model.healthScore
+                    subsystemFaultCount: model.faultCount
                     
                     onClicked: {
-                        canvas.subsystemSelected(modelData.id)
+                        canvas.subsystemSelected(model.id)
                     }
                     
                     onRemoveRequested: {
-                        subsystemManager.removeFromCanvas(modelData.id)
+                        subsystemManager.removeFromCanvas(model.id)
                     }
                 }
             }
