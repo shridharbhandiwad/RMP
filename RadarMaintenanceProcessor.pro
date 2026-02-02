@@ -47,6 +47,7 @@ HEADERS += \
     include/core/IRadarSubsystem.h \
     include/core/RadarSubsystem.h \
     include/core/SubsystemManager.h \
+    include/core/SubsystemListModel.h \
     include/core/HealthDataPipeline.h \
     include/core/TelemetryData.h \
     include/core/FaultManager.h \
@@ -80,6 +81,7 @@ SOURCES += \
     # Core
     src/core/RadarSubsystem.cpp \
     src/core/SubsystemManager.cpp \
+    src/core/SubsystemListModel.cpp \
     src/core/HealthDataPipeline.cpp \
     src/core/TelemetryData.cpp \
     src/core/FaultManager.cpp \
