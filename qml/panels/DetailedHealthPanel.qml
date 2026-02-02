@@ -285,14 +285,14 @@ Rectangle {
                     width: (parent.width - RadarTheme.spacingMedium) / 2
                     label: "State"
                     value: subsystem ? subsystem.healthState : "-"
-                    color: subsystem ? RadarColors.getHealthColor(subsystem.healthState) : RadarColors.textTertiary
+                    valueColor: subsystem ? RadarColors.getHealthColor(subsystem.healthState) : RadarColors.textTertiary
                 }
                 
                 StatCard {
                     width: (parent.width - RadarTheme.spacingMedium) / 2
                     label: "Faults"
                     value: subsystem ? subsystem.faultCount.toString() : "0"
-                    color: (subsystem && subsystem.faultCount > 0) ? RadarColors.healthFail : RadarColors.textPrimary
+                    valueColor: (subsystem && subsystem.faultCount > 0) ? RadarColors.healthFail : RadarColors.textPrimary
                 }
             }
             
@@ -410,7 +410,7 @@ Rectangle {
     component StatCard: Rectangle {
         property string label
         property string value
-        property color color: RadarColors.textPrimary
+        property color valueColor: RadarColors.textPrimary
         
         height: 70
         radius: RadarTheme.radiusMedium
@@ -433,7 +433,7 @@ Rectangle {
                 font.family: RadarTheme.fontFamilyMono
                 font.pixelSize: RadarTheme.fontSizeXLarge
                 font.bold: true
-                color: parent.parent.color
+                color: parent.parent.valueColor
                 anchors.horizontalCenter: parent.horizontalCenter
             }
         }
