@@ -3,6 +3,7 @@
 
 #include <QAbstractListModel>
 #include <QHash>
+#include <QSet>
 #include "RadarSubsystem.h"
 
 namespace RadarRMP {
