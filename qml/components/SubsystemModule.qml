@@ -6,11 +6,18 @@ import "../styles"
 /**
  * Individual subsystem module displayed on the system canvas
  * Shows health status, key metrics, and allows interaction
+ * Uses individual properties for efficient model binding
  */
 Rectangle {
     id: module
     
-    property var subsystemData
+    // Individual properties for efficient model binding
+    property string subsystemId: ""
+    property string subsystemName: ""
+    property string subsystemType: ""
+    property string subsystemHealthState: "UNKNOWN"
+    property real subsystemHealthScore: 100
+    property int subsystemFaultCount: 0
     
     signal clicked()
     signal removeRequested()
@@ -29,13 +36,13 @@ Rectangle {
         anchors.margins: -4
         radius: parent.radius + 4
         color: "transparent"
-        border.color: RadarColors.getHealthGlowColor(subsystemData.healthState)
+        border.color: RadarColors.getHealthGlowColor(module.subsystemHealthState)
         border.width: 8
         opacity: 0.5
-        visible: subsystemData.healthState !== "OK"
+        visible: module.subsystemHealthState !== "OK"
         
         SequentialAnimation on opacity {
-            running: subsystemData.healthState === "FAIL"
+            running: module.subsystemHealthState === "FAIL"
             loops: Animation.Infinite
             NumberAnimation { to: 0.2; duration: 800 }
             NumberAnimation { to: 0.6; duration: 800 }
@@ -69,10 +76,10 @@ Rectangle {
                 width: RadarTheme.healthIndicatorMedium
                 height: RadarTheme.healthIndicatorMedium
                 radius: width / 2
-                color: RadarColors.getHealthColor(subsystemData.healthState)
+                color: RadarColors.getHealthColor(module.subsystemHealthState)
                 
                 SequentialAnimation on scale {
-                    running: subsystemData.healthState === "FAIL"
+                    running: module.subsystemHealthState === "FAIL"
                     loops: Animation.Infinite
                     NumberAnimation { to: 1.3; duration: 400 }
                     NumberAnimation { to: 1.0; duration: 400 }
@@ -82,7 +89,7 @@ Rectangle {
             // Name
             Text {
                 Layout.fillWidth: true
-                text: subsystemData.name
+                text: module.subsystemName
                 font.family: RadarTheme.fontFamily
                 font.pixelSize: RadarTheme.fontSizeMedium
                 font.weight: Font.Medium
@@ -117,7 +124,7 @@ Rectangle {
         
         // Type label
         Text {
-            text: subsystemData.type
+            text: module.subsystemType
             font.family: RadarTheme.fontFamily
             font.pixelSize: RadarTheme.fontSizeXSmall
             color: RadarColors.textTertiary
@@ -131,10 +138,10 @@ Rectangle {
             color: RadarColors.backgroundDark
             
             Rectangle {
-                width: parent.width * (subsystemData.healthScore / 100)
+                width: parent.width * (module.subsystemHealthScore / 100)
                 height: parent.height
                 radius: 2
-                color: RadarColors.getHealthColor(subsystemData.healthState)
+                color: RadarColors.getHealthColor(module.subsystemHealthState)
                 
                 Behavior on width {
                     NumberAnimation { duration: RadarTheme.animationMedium }
@@ -153,28 +160,28 @@ Rectangle {
             // Health score
             MetricItem {
                 label: "Health"
-                value: subsystemData.healthScore.toFixed(0) + "%"
-                color: RadarColors.getHealthColor(subsystemData.healthState)
+                value: module.subsystemHealthScore.toFixed(0) + "%"
+                color: RadarColors.getHealthColor(module.subsystemHealthState)
             }
             
             // Fault count
             MetricItem {
                 label: "Faults"
-                value: subsystemData.faultCount.toString()
-                color: subsystemData.faultCount > 0 ? RadarColors.healthFail : RadarColors.textPrimary
+                value: module.subsystemFaultCount.toString()
+                color: module.subsystemFaultCount > 0 ? RadarColors.healthFail : RadarColors.textPrimary
             }
             
             // Status (dynamic based on subsystem type)
             MetricItem {
                 label: "Status"
-                value: subsystemData.healthState
-                color: RadarColors.getHealthColor(subsystemData.healthState)
+                value: module.subsystemHealthState
+                color: RadarColors.getHealthColor(module.subsystemHealthState)
             }
             
             // ID
             MetricItem {
                 label: "ID"
-                value: subsystemData.id
+                value: module.subsystemId
                 color: RadarColors.textSecondary
             }
         }
@@ -184,7 +191,7 @@ Rectangle {
         if (mouseArea.containsMouse) {
             return RadarColors.accent
         }
-        return RadarColors.getHealthColor(subsystemData.healthState)
+        return RadarColors.getHealthColor(module.subsystemHealthState)
     }
     
     // Metric item component

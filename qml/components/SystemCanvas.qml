@@ -112,7 +112,7 @@ Rectangle {
         }
     }
     
-    // Module container with FlowLayout
+    // Module container with FlowLayout - using proper model for efficient updates
     Flickable {
         id: moduleContainer
         anchors.top: canvasHeader.bottom
@@ -132,17 +132,23 @@ Rectangle {
             
             Repeater {
                 id: moduleRepeater
-                model: subsystemManager.activeSubsystems
+                model: subsystemManager.activeSubsystemModel
                 
                 SubsystemModule {
-                    subsystemData: modelData
+                    // Use model roles directly for efficient binding
+                    subsystemId: model.id
+                    subsystemName: model.name
+                    subsystemType: model.type
+                    subsystemHealthState: model.healthState
+                    subsystemHealthScore: model.healthScore
+                    subsystemFaultCount: model.faultCount
                     
                     onClicked: {
-                        canvas.subsystemSelected(modelData.id)
+                        canvas.subsystemSelected(model.id)
                     }
                     
                     onRemoveRequested: {
-                        subsystemManager.removeFromCanvas(modelData.id)
+                        subsystemManager.removeFromCanvas(model.id)
                     }
                 }
             }

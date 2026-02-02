@@ -130,6 +130,10 @@ protected:
     bool m_enabled;
     mutable QMutex m_mutex;
     
+    // Prevent recursive/cascading processHealthData calls
+    bool m_processingHealth;
+    bool m_healthUpdatePending;
+    
     static constexpr int MAX_FAULT_HISTORY = 1000;
 };
 

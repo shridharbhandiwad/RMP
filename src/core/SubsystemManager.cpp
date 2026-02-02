@@ -6,12 +6,27 @@ SubsystemManager::SubsystemManager(QObject* parent)
     : QObject(parent)
     , m_systemHealthState(HealthState::UNKNOWN)
     , m_systemHealthScore(100.0)
-    , m_updateInterval(1000)
+    , m_cachedHealthyCount(0)
+    , m_cachedDegradedCount(0)
+    , m_cachedFailedCount(0)
+    , m_updateInterval(100)  // 100ms throttle interval
+    , m_healthUpdatePending(false)
 {
     m_faultManager = new FaultManager(this);
     
-    m_updateTimer = new QTimer(this);
-    connect(m_updateTimer, &QTimer::timeout, this, &SubsystemManager::updateAll);
+    // Create models
+    m_subsystemModel = new SubsystemListModel(this);
+    m_activeModel = new ActiveSubsystemModel(this);
+    m_activeModel->setSourceModel(m_subsystemModel);
+    
+    // Connect active model count changes
+    connect(m_activeModel, &ActiveSubsystemModel::countChanged,
+            this, &SubsystemManager::activeSubsystemsChanged);
+    
+    // Throttle timer - coalesces rapid updates into single UI refresh
+    m_throttleTimer = new QTimer(this);
+    m_throttleTimer->setSingleShot(true);
+    connect(m_throttleTimer, &QTimer::timeout, this, &SubsystemManager::onThrottledUpdate);
 }
 
 SubsystemManager::~SubsystemManager()
@@ -32,10 +47,13 @@ void SubsystemManager::registerSubsystem(RadarSubsystem* subsystem)
         subsystem->setParent(this);
     }
     
+    // Add to model
+    m_subsystemModel->addSubsystem(subsystem);
+    
     connectSubsystemSignals(subsystem);
     
     emit subsystemsChanged();
-    computeSystemHealth();
+    scheduleHealthUpdate();
 }
 
 void SubsystemManager::unregisterSubsystem(const QString& id)
@@ -44,10 +62,13 @@ void SubsystemManager::unregisterSubsystem(const QString& id)
         return;
     }
     
-    // Remove from active list if present
-    m_activeSubsystemIds.removeAll(id);
+    // Remove from active list
+    m_activeModel->removeFromCanvas(id);
     
     RadarSubsystem* subsystem = m_subsystems.take(id);
+    
+    // Remove from model
+    m_subsystemModel->removeSubsystem(id);
     
     // Clear any active faults
     m_faultManager->clearAllFaults(id);
@@ -58,8 +79,7 @@ void SubsystemManager::unregisterSubsystem(const QString& id)
     }
     
     emit subsystemsChanged();
-    emit activeSubsystemsChanged();
-    computeSystemHealth();
+    scheduleHealthUpdate();
 }
 
 RadarSubsystem* SubsystemManager::getSubsystem(const QString& id) const
@@ -91,45 +111,19 @@ void SubsystemManager::addToCanvas(const QString& subsystemId)
         return;
     }
     
-    if (!m_activeSubsystemIds.contains(subsystemId)) {
-        m_activeSubsystemIds.append(subsystemId);
-        emit activeSubsystemsChanged();
-        computeSystemHealth();
-    }
+    m_activeModel->addToCanvas(subsystemId);
+    scheduleHealthUpdate();
 }
 
 void SubsystemManager::removeFromCanvas(const QString& subsystemId)
 {
-    if (m_activeSubsystemIds.removeAll(subsystemId) > 0) {
-        emit activeSubsystemsChanged();
-        computeSystemHealth();
-    }
+    m_activeModel->removeFromCanvas(subsystemId);
+    scheduleHealthUpdate();
 }
 
 bool SubsystemManager::isOnCanvas(const QString& subsystemId) const
 {
-    return m_activeSubsystemIds.contains(subsystemId);
-}
-
-QVariantList SubsystemManager::getActiveSubsystemsVariant() const
-{
-    QVariantList list;
-    
-    for (const QString& id : m_activeSubsystemIds) {
-        if (RadarSubsystem* sub = m_subsystems.value(id)) {
-            QVariantMap map;
-            map["id"] = sub->getId();
-            map["name"] = sub->getName();
-            map["type"] = sub->getTypeName();
-            map["healthState"] = sub->getHealthStateString();
-            map["healthScore"] = sub->getHealthScore();
-            map["faultCount"] = sub->getFaultCount();
-            map["enabled"] = sub->isEnabled();
-            list.append(map);
-        }
-    }
-    
-    return list;
+    return m_subsystemModel->isOnCanvas(subsystemId);
 }
 
 HealthState SubsystemManager::getSystemHealthState() const
@@ -155,35 +149,13 @@ QVariantMap SubsystemManager::getSystemHealthSummary() const
     summary["score"] = m_systemHealthScore;
     summary["totalSubsystems"] = getTotalSubsystemCount();
     summary["activeSubsystems"] = getActiveSubsystemCount();
-    summary["healthyCount"] = getHealthySubsystemCount();
-    summary["degradedCount"] = getDegradedSubsystemCount();
-    summary["failedCount"] = getFailedSubsystemCount();
+    summary["healthyCount"] = m_cachedHealthyCount;
+    summary["degradedCount"] = m_cachedDegradedCount;
+    summary["failedCount"] = m_cachedFailedCount;
     summary["totalFaults"] = m_faultManager->getTotalActiveFaults();
     summary["criticalFaults"] = m_faultManager->getCriticalFaultCount();
     
     return summary;
-}
-
-QVariantList SubsystemManager::getSubsystemsVariant() const
-{
-    QVariantList list;
-    
-    for (auto* subsystem : m_subsystems) {
-        QVariantMap map;
-        map["id"] = subsystem->getId();
-        map["name"] = subsystem->getName();
-        map["type"] = subsystem->getTypeName();
-        map["description"] = subsystem->getDescription();
-        map["healthState"] = subsystem->getHealthStateString();
-        map["healthScore"] = subsystem->getHealthScore();
-        map["statusMessage"] = subsystem->getStatusMessage();
-        map["faultCount"] = subsystem->getFaultCount();
-        map["enabled"] = subsystem->isEnabled();
-        map["onCanvas"] = m_activeSubsystemIds.contains(subsystem->getId());
-        list.append(map);
-    }
-    
-    return list;
 }
 
 QVariant SubsystemManager::getSubsystemById(const QString& id) const
@@ -233,46 +205,22 @@ int SubsystemManager::getTotalSubsystemCount() const
 
 int SubsystemManager::getActiveSubsystemCount() const
 {
-    return m_activeSubsystemIds.size();
+    return m_activeModel->count();
 }
 
 int SubsystemManager::getHealthySubsystemCount() const
 {
-    int count = 0;
-    for (const QString& id : m_activeSubsystemIds) {
-        if (RadarSubsystem* sub = m_subsystems.value(id)) {
-            if (sub->getHealthState() == HealthState::OK) {
-                count++;
-            }
-        }
-    }
-    return count;
+    return m_cachedHealthyCount;
 }
 
 int SubsystemManager::getDegradedSubsystemCount() const
 {
-    int count = 0;
-    for (const QString& id : m_activeSubsystemIds) {
-        if (RadarSubsystem* sub = m_subsystems.value(id)) {
-            if (sub->getHealthState() == HealthState::DEGRADED) {
-                count++;
-            }
-        }
-    }
-    return count;
+    return m_cachedDegradedCount;
 }
 
 int SubsystemManager::getFailedSubsystemCount() const
 {
-    int count = 0;
-    for (const QString& id : m_activeSubsystemIds) {
-        if (RadarSubsystem* sub = m_subsystems.value(id)) {
-            if (sub->getHealthState() == HealthState::FAIL) {
-                count++;
-            }
-        }
-    }
-    return count;
+    return m_cachedFailedCount;
 }
 
 FaultManager* SubsystemManager::getFaultManager() const
@@ -282,10 +230,7 @@ FaultManager* SubsystemManager::getFaultManager() const
 
 void SubsystemManager::setUpdateInterval(int msec)
 {
-    m_updateInterval = msec;
-    if (m_updateTimer->isActive()) {
-        m_updateTimer->setInterval(msec);
-    }
+    m_updateInterval = qMax(50, msec);  // Minimum 50ms throttle
 }
 
 int SubsystemManager::getUpdateInterval() const
@@ -295,22 +240,38 @@ int SubsystemManager::getUpdateInterval() const
 
 void SubsystemManager::startUpdates()
 {
-    if (!m_updateTimer->isActive()) {
-        m_updateTimer->start(m_updateInterval);
-    }
+    // No-op now - updates are driven by HealthSimulator and throttled
 }
 
 void SubsystemManager::stopUpdates()
 {
-    m_updateTimer->stop();
+    m_throttleTimer->stop();
 }
 
-void SubsystemManager::updateAll()
+void SubsystemManager::scheduleHealthUpdate()
 {
-    for (auto* subsystem : m_subsystems) {
-        subsystem->processHealthData();
+    // Mark that an update is needed
+    m_healthUpdatePending = true;
+    
+    // Start/restart throttle timer if not already running
+    if (!m_throttleTimer->isActive()) {
+        m_throttleTimer->start(m_updateInterval);
     }
+}
+
+void SubsystemManager::onThrottledUpdate()
+{
+    if (!m_healthUpdatePending) {
+        return;
+    }
+    
+    m_healthUpdatePending = false;
+    
+    // Compute health state
     computeSystemHealth();
+    
+    // Refresh models
+    m_subsystemModel->refreshAll();
 }
 
 void SubsystemManager::resetAll()
@@ -327,8 +288,9 @@ void SubsystemManager::onSubsystemHealthChanged()
     RadarSubsystem* subsystem = qobject_cast<RadarSubsystem*>(sender());
     if (subsystem) {
         emit subsystemHealthChanged(subsystem->getId());
+        m_activeModel->refreshSubsystem(subsystem->getId());
     }
-    computeSystemHealth();
+    scheduleHealthUpdate();
 }
 
 void SubsystemManager::onSubsystemFaultOccurred(const QString& faultCode, const QString& description)
@@ -341,7 +303,7 @@ void SubsystemManager::onSubsystemFaultOccurred(const QString& faultCode, const 
         fault.subsystemId = subsystem->getId();
         fault.timestamp = QDateTime::currentDateTime();
         fault.active = true;
-        fault.severity = FaultSeverity::WARNING;  // Could be determined from fault code
+        fault.severity = FaultSeverity::WARNING;
         
         m_faultManager->registerFault(fault);
         emit subsystemFaultOccurred(subsystem->getId(), faultCode);
@@ -350,19 +312,28 @@ void SubsystemManager::onSubsystemFaultOccurred(const QString& faultCode, const 
 
 void SubsystemManager::connectSubsystemSignals(RadarSubsystem* subsystem)
 {
+    // Use QueuedConnection to prevent blocking
     connect(subsystem, &RadarSubsystem::healthChanged,
-            this, &SubsystemManager::onSubsystemHealthChanged);
+            this, &SubsystemManager::onSubsystemHealthChanged,
+            Qt::QueuedConnection);
     connect(subsystem, &RadarSubsystem::faultOccurred,
-            this, &SubsystemManager::onSubsystemFaultOccurred);
+            this, &SubsystemManager::onSubsystemFaultOccurred,
+            Qt::QueuedConnection);
     connect(subsystem, &RadarSubsystem::faultCleared,
             this, [this, subsystem](const QString& faultCode) {
                 m_faultManager->clearFault(faultCode, subsystem->getId());
-            });
+            },
+            Qt::QueuedConnection);
 }
 
 void SubsystemManager::computeSystemHealth()
 {
-    if (m_activeSubsystemIds.isEmpty()) {
+    // Update cached counts
+    updateCachedCounts();
+    
+    int activeCount = m_activeModel->count();
+    
+    if (activeCount == 0) {
         m_systemHealthState = HealthState::UNKNOWN;
         m_systemHealthScore = 100.0;
         emit systemHealthChanged();
@@ -371,47 +342,75 @@ void SubsystemManager::computeSystemHealth()
     
     // Compute aggregate health
     double totalScore = 0;
-    bool hasFailed = false;
-    bool hasDegraded = false;
     int enabledCount = 0;
     
-    for (const QString& id : m_activeSubsystemIds) {
-        if (RadarSubsystem* sub = m_subsystems.value(id)) {
-            if (!sub->isEnabled()) {
-                continue;
-            }
-            
-            enabledCount++;
-            totalScore += sub->getHealthScore();
-            
-            switch (sub->getHealthState()) {
-                case HealthState::FAIL:
-                    hasFailed = true;
-                    break;
-                case HealthState::DEGRADED:
-                    hasDegraded = true;
-                    break;
-                default:
-                    break;
-            }
+    for (int i = 0; i < m_subsystemModel->rowCount(); ++i) {
+        RadarSubsystem* sub = m_subsystemModel->getSubsystem(i);
+        if (!sub || !m_subsystemModel->isOnCanvas(sub->getId())) {
+            continue;
         }
+        
+        if (!sub->isEnabled()) {
+            continue;
+        }
+        
+        enabledCount++;
+        totalScore += sub->getHealthScore();
     }
     
-    // Determine overall state
-    if (hasFailed) {
-        m_systemHealthState = HealthState::FAIL;
-    } else if (hasDegraded) {
-        m_systemHealthState = HealthState::DEGRADED;
+    // Determine overall state based on cached counts
+    HealthState newState;
+    if (m_cachedFailedCount > 0) {
+        newState = HealthState::FAIL;
+    } else if (m_cachedDegradedCount > 0) {
+        newState = HealthState::DEGRADED;
     } else if (enabledCount > 0) {
-        m_systemHealthState = HealthState::OK;
+        newState = HealthState::OK;
     } else {
-        m_systemHealthState = HealthState::UNKNOWN;
+        newState = HealthState::UNKNOWN;
     }
     
     // Compute average score
-    m_systemHealthScore = enabledCount > 0 ? totalScore / enabledCount : 100.0;
+    double newScore = enabledCount > 0 ? totalScore / enabledCount : 100.0;
     
-    emit systemHealthChanged();
+    // Only emit if changed
+    if (newState != m_systemHealthState || qAbs(newScore - m_systemHealthScore) > 0.01) {
+        m_systemHealthState = newState;
+        m_systemHealthScore = newScore;
+        emit systemHealthChanged();
+    }
+}
+
+void SubsystemManager::updateCachedCounts()
+{
+    int healthy = 0;
+    int degraded = 0;
+    int failed = 0;
+    
+    for (int i = 0; i < m_subsystemModel->rowCount(); ++i) {
+        RadarSubsystem* sub = m_subsystemModel->getSubsystem(i);
+        if (!sub || !m_subsystemModel->isOnCanvas(sub->getId())) {
+            continue;
+        }
+        
+        switch (sub->getHealthState()) {
+            case HealthState::OK:
+                healthy++;
+                break;
+            case HealthState::DEGRADED:
+                degraded++;
+                break;
+            case HealthState::FAIL:
+                failed++;
+                break;
+            default:
+                break;
+        }
+    }
+    
+    m_cachedHealthyCount = healthy;
+    m_cachedDegradedCount = degraded;
+    m_cachedFailedCount = failed;
 }
 
 } // namespace RadarRMP

@@ -88,23 +88,32 @@ Rectangle {
             }
         }
         
-        // Subsystem list
+        // Subsystem list - using proper model for efficient updates
         ListView {
             id: subsystemList
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.margins: RadarTheme.spacingSmall
             
-            model: subsystemManager.subsystems
+            model: subsystemManager.subsystemModel
             spacing: RadarTheme.spacingSmall
             clip: true
             
+            // Disable automatic caching to prevent stale views
+            cacheBuffer: 0
+            
             delegate: SubsystemPaletteItem {
                 width: subsystemList.width
-                subsystemData: modelData
+                // Use model roles directly instead of modelData
+                subsystemId: model.id
+                subsystemName: model.name
+                subsystemType: model.type
+                subsystemHealthState: model.healthState
+                subsystemHealthScore: model.healthScore
+                subsystemOnCanvas: model.onCanvas
                 
                 onAddToCanvas: {
-                    subsystemManager.addToCanvas(modelData.id)
+                    subsystemManager.addToCanvas(model.id)
                 }
             }
             
@@ -182,20 +191,28 @@ Rectangle {
     
     /**
      * Individual subsystem item in the palette
+     * Uses individual properties instead of object for efficient model binding
      */
     component SubsystemPaletteItem: Rectangle {
         id: paletteItem
         
-        property var subsystemData
+        // Use individual properties for efficient model binding
+        property string subsystemId: ""
+        property string subsystemName: ""
+        property string subsystemType: ""
+        property string subsystemHealthState: "UNKNOWN"
+        property real subsystemHealthScore: 100
+        property bool subsystemOnCanvas: false
+        
         signal addToCanvas()
         
         height: 72
         radius: RadarTheme.radiusMedium
         color: mouseArea.containsMouse ? RadarColors.surfaceHover : RadarColors.surface
-        border.color: subsystemData.onCanvas ? RadarColors.accent : RadarColors.border
-        border.width: subsystemData.onCanvas ? 2 : 1
+        border.color: subsystemOnCanvas ? RadarColors.accent : RadarColors.border
+        border.width: subsystemOnCanvas ? 2 : 1
         
-        opacity: subsystemData.onCanvas ? 0.6 : 1.0
+        opacity: subsystemOnCanvas ? 0.6 : 1.0
         
         Behavior on color {
             ColorAnimation { duration: RadarTheme.animationFast }
@@ -206,11 +223,11 @@ Rectangle {
             anchors.fill: parent
             hoverEnabled: true
             
-            drag.target: !subsystemData.onCanvas ? dragProxy : null
+            drag.target: !paletteItem.subsystemOnCanvas ? dragProxy : null
             drag.threshold: 10
             
             onClicked: {
-                if (!subsystemData.onCanvas && !drag.active) {
+                if (!paletteItem.subsystemOnCanvas && !drag.active) {
                     paletteItem.addToCanvas()
                 }
             }
@@ -222,8 +239,8 @@ Rectangle {
             width: 48
             height: 48
             radius: RadarTheme.radiusMedium
-            color: RadarColors.getHealthGlowColor(subsystemData.healthState)
-            border.color: RadarColors.getHealthColor(subsystemData.healthState)
+            color: RadarColors.getHealthGlowColor(paletteItem.subsystemHealthState)
+            border.color: RadarColors.getHealthColor(paletteItem.subsystemHealthState)
             border.width: 2
             visible: Drag.active
             opacity: 0.8
@@ -235,12 +252,12 @@ Rectangle {
             Drag.hotSpot.x: width / 2
             Drag.hotSpot.y: height / 2
             
-            property string subsystemId: subsystemData ? subsystemData.id : ""
-            Drag.mimeData: ({ "text/plain": subsystemId, "subsystemId": subsystemId })
+            property string subsystemIdValue: paletteItem.subsystemId
+            Drag.mimeData: ({ "text/plain": subsystemIdValue, "subsystemId": subsystemIdValue })
             
             Text {
                 anchors.centerIn: parent
-                text: getSubsystemIcon(subsystemData.type)
+                text: getSubsystemIcon(paletteItem.subsystemType)
                 font.pixelSize: 20
             }
         }
@@ -255,13 +272,13 @@ Rectangle {
                 width: 48
                 height: 48
                 radius: RadarTheme.radiusMedium
-                color: RadarColors.getHealthGlowColor(subsystemData.healthState)
-                border.color: RadarColors.getHealthColor(subsystemData.healthState)
+                color: RadarColors.getHealthGlowColor(paletteItem.subsystemHealthState)
+                border.color: RadarColors.getHealthColor(paletteItem.subsystemHealthState)
                 border.width: 2
                 
                 Text {
                     anchors.centerIn: parent
-                    text: getSubsystemIcon(subsystemData.type)
+                    text: getSubsystemIcon(paletteItem.subsystemType)
                     font.pixelSize: 20
                 }
             }
@@ -272,7 +289,7 @@ Rectangle {
                 spacing: 2
                 
                 Text {
-                    text: subsystemData.name
+                    text: paletteItem.subsystemName
                     font.family: RadarTheme.fontFamily
                     font.pixelSize: RadarTheme.fontSizeMedium
                     font.weight: Font.Medium
@@ -282,7 +299,7 @@ Rectangle {
                 }
                 
                 Text {
-                    text: subsystemData.type
+                    text: paletteItem.subsystemType
                     font.family: RadarTheme.fontFamily
                     font.pixelSize: RadarTheme.fontSizeSmall
                     color: RadarColors.textTertiary
@@ -295,14 +312,14 @@ Rectangle {
                         width: 8
                         height: 8
                         radius: 4
-                        color: RadarColors.getHealthColor(subsystemData.healthState)
+                        color: RadarColors.getHealthColor(paletteItem.subsystemHealthState)
                     }
                     
                     Text {
-                        text: subsystemData.healthState + " - " + subsystemData.healthScore.toFixed(0) + "%"
+                        text: paletteItem.subsystemHealthState + " - " + paletteItem.subsystemHealthScore.toFixed(0) + "%"
                         font.family: RadarTheme.fontFamily
                         font.pixelSize: RadarTheme.fontSizeXSmall
-                        color: RadarColors.getHealthColor(subsystemData.healthState)
+                        color: RadarColors.getHealthColor(paletteItem.subsystemHealthState)
                     }
                 }
             }
@@ -312,17 +329,17 @@ Rectangle {
                 width: 28
                 height: 28
                 radius: 14
-                color: subsystemData.onCanvas ? RadarColors.accent : "transparent"
-                border.color: subsystemData.onCanvas ? RadarColors.accent : RadarColors.border
+                color: paletteItem.subsystemOnCanvas ? RadarColors.accent : "transparent"
+                border.color: paletteItem.subsystemOnCanvas ? RadarColors.accent : RadarColors.border
                 border.width: 1
-                visible: !subsystemData.onCanvas || mouseArea.containsMouse
+                visible: !paletteItem.subsystemOnCanvas || mouseArea.containsMouse
                 
                 Text {
                     anchors.centerIn: parent
-                    text: subsystemData.onCanvas ? "✓" : "+"
+                    text: paletteItem.subsystemOnCanvas ? "✓" : "+"
                     font.pixelSize: 14
                     font.bold: true
-                    color: subsystemData.onCanvas ? RadarColors.background : RadarColors.textSecondary
+                    color: paletteItem.subsystemOnCanvas ? RadarColors.background : RadarColors.textSecondary
                 }
             }
         }

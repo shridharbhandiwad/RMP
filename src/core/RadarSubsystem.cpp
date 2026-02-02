@@ -1,5 +1,6 @@
 #include "core/RadarSubsystem.h"
 #include <QMutexLocker>
+#include <QTimer>
 
 namespace RadarRMP {
 
@@ -12,15 +13,17 @@ RadarSubsystem::RadarSubsystem(const QString& id, const QString& name,
     , m_healthState(HealthState::UNKNOWN)
     , m_healthScore(100.0)
     , m_enabled(true)
+    , m_processingHealth(false)
+    , m_healthUpdatePending(false)
 {
     m_telemetryData = new TelemetryData(this);
     
+    // NOTE: We no longer automatically trigger processHealthData from telemetry changes
+    // This prevents cascading signal emissions. processHealthData is called explicitly
+    // after all data updates are complete in updateData().
     connect(m_telemetryData, &TelemetryData::dataChanged,
-            this, &RadarSubsystem::telemetryChanged);
-    connect(m_telemetryData, &TelemetryData::thresholdExceeded,
-            this, [this](const QString& param, const QString& type) {
-                processHealthData();
-            });
+            this, &RadarSubsystem::telemetryChanged,
+            Qt::QueuedConnection);  // Use queued to batch updates
     
     m_description = subsystemTypeToString(type);
     initializeTelemetryParameters();
@@ -187,7 +190,8 @@ bool RadarSubsystem::clearFault(const QString& faultCode)
             locker.unlock();
             emit faultCleared(faultCode);
             emit faultsChanged();
-            processHealthData();
+            // Schedule health update instead of immediate call
+            QTimer::singleShot(0, this, &RadarSubsystem::processHealthData);
             return true;
         }
     }
@@ -215,7 +219,8 @@ int RadarSubsystem::clearAllFaults()
     
     if (count > 0) {
         emit faultsChanged();
-        processHealthData();
+        // Schedule health update instead of immediate call
+        QTimer::singleShot(0, this, &RadarSubsystem::processHealthData);
     }
     
     return count;
@@ -237,7 +242,8 @@ void RadarSubsystem::setEnabled(bool enabled)
         m_enabled = enabled;
     }
     emit enabledChanged();
-    processHealthData();
+    // Schedule health update instead of immediate call
+    QTimer::singleShot(0, this, &RadarSubsystem::processHealthData);
 }
 
 void RadarSubsystem::reset()
@@ -274,9 +280,18 @@ void RadarSubsystem::updateData(const QVariantMap& data)
 
 void RadarSubsystem::processHealthData()
 {
+    // Prevent recursive calls - if already processing, just mark pending
+    if (m_processingHealth) {
+        m_healthUpdatePending = true;
+        return;
+    }
+    
+    m_processingHealth = true;
+    
     QMutexLocker locker(&m_mutex);
     
     HealthState oldState = m_healthState;
+    double oldScore = m_healthScore;
     
     // Compute new health state
     m_healthState = computeHealthState();
@@ -285,12 +300,27 @@ void RadarSubsystem::processHealthData()
     
     locker.unlock();
     
-    if (oldState != m_healthState) {
+    // Only emit signals if something actually changed
+    bool stateChanged = (oldState != m_healthState);
+    bool scoreChanged = qAbs(oldScore - m_healthScore) > 0.1;  // 0.1% threshold
+    
+    if (stateChanged) {
         emit stateTransition(healthStateToString(oldState), 
                             healthStateToString(m_healthState));
     }
     
-    emit healthChanged();
+    if (stateChanged || scoreChanged) {
+        emit healthChanged();
+    }
+    
+    m_processingHealth = false;
+    
+    // If another update was requested while we were processing, do it now
+    if (m_healthUpdatePending) {
+        m_healthUpdatePending = false;
+        // Use QTimer::singleShot to prevent deep recursion
+        QTimer::singleShot(0, this, &RadarSubsystem::processHealthData);
+    }
 }
 
 void RadarSubsystem::onUpdate()
@@ -403,7 +433,8 @@ void RadarSubsystem::addFault(const FaultCode& fault)
     
     emit faultOccurred(fault.code, fault.description);
     emit faultsChanged();
-    processHealthData();
+    // Schedule health update instead of immediate call
+    QTimer::singleShot(0, this, &RadarSubsystem::processHealthData);
 }
 
 void RadarSubsystem::removeFault(const QString& faultCode)
