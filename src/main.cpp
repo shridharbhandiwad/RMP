@@ -112,6 +112,9 @@ int main(int argc, char *argv[])
     // Create QML engine
     QQmlApplicationEngine engine;
     
+    // Add import path for QML modules (for singletons to work properly)
+    engine.addImportPath("qrc:/qml");
+    
     // Expose C++ objects to QML
     engine.rootContext()->setContextProperty("subsystemManager", subsystemManager);
     engine.rootContext()->setContextProperty("healthPipeline", pipeline);

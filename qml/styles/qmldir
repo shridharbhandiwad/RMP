@@ -1,0 +1,3 @@
+module styles
+singleton RadarColors 1.0 RadarColors.qml
+singleton RadarTheme 1.0 RadarTheme.qml

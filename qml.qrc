@@ -30,6 +30,7 @@
         <file>qml/panels/FaultHistoryPanel.qml</file>
         
         <!-- Styles -->
+        <file>qml/styles/qmldir</file>
         <file>qml/styles/RadarTheme.qml</file>
         <file>qml/styles/RadarColors.qml</file>
     </qresource>
