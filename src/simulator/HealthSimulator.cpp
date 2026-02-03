@@ -241,13 +241,10 @@ void HealthSimulator::onUpdateTick()
     }
     
     // Phase 2: Apply all updates in batch (debouncing will prevent signal storm)
+    // Qt's event loop naturally handles responsiveness - no need for manual processEvents
     for (const auto& update : batchUpdates) {
         update.first->updateData(update.second);
         emit dataGenerated(update.first->getId(), update.second);
-        
-        // Yield to event loop every few subsystems to prevent blocking
-        // This allows GUI to stay responsive
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
     }
 }
 

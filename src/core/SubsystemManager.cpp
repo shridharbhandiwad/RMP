@@ -280,9 +280,6 @@ void SubsystemManager::onThrottledUpdate()
     if (m_activeModel->count() > 0) {
         m_subsystemModel->refreshAll();
     }
-    
-    // Yield to event loop to prevent blocking
-    QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
 }
 
 void SubsystemManager::resetAll()
