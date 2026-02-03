@@ -9,9 +9,13 @@ UptimeTracker::UptimeTracker(QObject* parent)
 {
     m_trackingStartTime = QDateTime::currentDateTime();
     
-    m_tickTimer = new QTimer(this);
-    connect(m_tickTimer, &QTimer::timeout, this, &UptimeTracker::tick);
-    m_tickTimer->start(1000);  // Tick every second
+    // PERFORMANCE FIX: Disabled tick timer that runs every second
+    // Previously, the timer would call tick() which iterates through all records
+    // This was causing continuous event loop pressure and unresponsiveness
+    // 
+    // m_tickTimer = new QTimer(this);
+    // connect(m_tickTimer, &QTimer::timeout, this, &UptimeTracker::tick);
+    // m_tickTimer->start(1000);  // DISABLED - was ticking every second
 }
 
 void UptimeTracker::registerSubsystem(const QString& subsystemId)
