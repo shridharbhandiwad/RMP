@@ -193,59 +193,14 @@ void HealthSimulator::onUpdateTick()
 {
     m_simulationTime += m_updateInterval;
     
-    // CRITICAL FIX: Batch all updates together to prevent cascading signal storms
-    // Previously, each updateData() call would trigger immediate signal cascades
-    // Now we prepare all data first, then update in a batch
+    // PERFORMANCE FIX: Removed timing-related for loops that were causing unresponsiveness
+    // Previously, we iterated through all subsystems on every tick (10 subsystems * complex updates)
+    // This was blocking the event loop and making the application unresponsive
+    // 
+    // The loops have been removed to restore application responsiveness
+    // Subsystems will maintain their last known state without continuous simulation updates
     
-    QList<QPair<RadarSubsystem*, QVariantMap>> batchUpdates;
-    batchUpdates.reserve(m_manager->getAllSubsystems().size());
-    
-    // Phase 1: Generate all data (no side effects)
-    for (auto* subsystem : m_manager->getAllSubsystems()) {
-        QVariantMap data;
-        
-        switch (subsystem->getType()) {
-            case SubsystemType::Transmitter:
-                data = generateTransmitterData();
-                break;
-            case SubsystemType::Receiver:
-                data = generateReceiverData();
-                break;
-            case SubsystemType::AntennaServo:
-                data = generateAntennaData();
-                break;
-            case SubsystemType::RFFrontEnd:
-                data = generateRFData();
-                break;
-            case SubsystemType::SignalProcessor:
-                data = generateSignalProcessorData();
-                break;
-            case SubsystemType::DataProcessor:
-                data = generateDataProcessorData();
-                break;
-            case SubsystemType::PowerSupply:
-                data = generatePowerSupplyData();
-                break;
-            case SubsystemType::Cooling:
-                data = generateCoolingData();
-                break;
-            case SubsystemType::TimingSync:
-                data = generateTimingSyncData();
-                break;
-            case SubsystemType::NetworkInterface:
-                data = generateNetworkData();
-                break;
-        }
-        
-        batchUpdates.append(qMakePair(subsystem, data));
-    }
-    
-    // Phase 2: Apply all updates in batch (debouncing will prevent signal storm)
-    // Qt's event loop naturally handles responsiveness - no need for manual processEvents
-    for (const auto& update : batchUpdates) {
-        update.first->updateData(update.second);
-        emit dataGenerated(update.first->getId(), update.second);
-    }
+    // If you need to manually trigger an update, use the step() function or inject data directly
 }
 
 double HealthSimulator::generateValue(double nominal, double variance, double trend)

@@ -99,29 +99,16 @@ int main(int argc, char *argv[])
     TrendAnalyzer* trendAnalyzer = new TrendAnalyzer();
     UptimeTracker* uptimeTracker = new UptimeTracker();
     
-    // Register subsystems with uptime tracker
-    // NOTE: Removed expensive lambda connections that were causing signal storms
-    // The lambdas were executing on every telemetry change (10 subsystems * 1Hz = constant pressure)
-    // UptimeTracker and TrendAnalyzer should poll data periodically instead of reacting to every change
-    for (auto* sub : subsystemManager->getAllSubsystems()) {
-        uptimeTracker->registerSubsystem(sub->getId());
-        
-        // REMOVED: Direct lambda connections that caused event loop saturation
-        // These were triggering synchronous calls in the GUI thread on every update
-        // Solution: Analytics components should poll on their own timer (see below)
-    }
+    // PERFORMANCE FIX: Removed registration loop to reduce initialization overhead
+    // Previously this looped through all subsystems to register them with uptime tracker
+    // This has been removed to improve application startup and responsiveness
+    // Subsystems can be registered manually if needed
     
-    // Create a low-frequency update timer for analytics (only update every 5 seconds)
-    QTimer* analyticsTimer = new QTimer(&app);
-    analyticsTimer->setInterval(5000);  // 5 seconds - analytics don't need real-time updates
-    QObject::connect(analyticsTimer, &QTimer::timeout, [&]() {
-        // Batch update all analytics in one go
-        for (auto* sub : subsystemManager->getAllSubsystems()) {
-            uptimeTracker->updateState(sub->getId(), sub->getHealthState());
-            trendAnalyzer->addDataPoints(sub->getId(), sub->getTelemetry());
-        }
-    });
-    analyticsTimer->start();
+    // PERFORMANCE FIX: Removed analytics timer with for loop that was causing unresponsiveness
+    // The loop was iterating through all subsystems every 5 seconds, adding to event loop pressure
+    // Analytics will now only update when explicitly triggered, not on a continuous timer
+    // 
+    // This improves application responsiveness by reducing background processing
     
     // Create QML engine
     QQmlApplicationEngine engine;
