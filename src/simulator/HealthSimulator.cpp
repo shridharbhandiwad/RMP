@@ -2,6 +2,7 @@
 #include "core/SubsystemManager.h"
 #include "core/RadarSubsystem.h"
 #include <QRandomGenerator>
+#include <QCoreApplication>
 
 namespace RadarRMP {
 
@@ -192,6 +193,14 @@ void HealthSimulator::onUpdateTick()
 {
     m_simulationTime += m_updateInterval;
     
+    // CRITICAL FIX: Batch all updates together to prevent cascading signal storms
+    // Previously, each updateData() call would trigger immediate signal cascades
+    // Now we prepare all data first, then update in a batch
+    
+    QList<QPair<RadarSubsystem*, QVariantMap>> batchUpdates;
+    batchUpdates.reserve(m_manager->getAllSubsystems().size());
+    
+    // Phase 1: Generate all data (no side effects)
     for (auto* subsystem : m_manager->getAllSubsystems()) {
         QVariantMap data;
         
@@ -228,8 +237,17 @@ void HealthSimulator::onUpdateTick()
                 break;
         }
         
-        subsystem->updateData(data);
-        emit dataGenerated(subsystem->getId(), data);
+        batchUpdates.append(qMakePair(subsystem, data));
+    }
+    
+    // Phase 2: Apply all updates in batch (debouncing will prevent signal storm)
+    for (const auto& update : batchUpdates) {
+        update.first->updateData(update.second);
+        emit dataGenerated(update.first->getId(), update.second);
+        
+        // Yield to event loop every few subsystems to prevent blocking
+        // This allows GUI to stay responsive
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
     }
 }
 

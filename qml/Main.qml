@@ -29,6 +29,31 @@ ApplicationWindow {
     property bool showDetailPanel: false
     property string currentPanel: "overview"
     
+    // CRITICAL FIX: Cache frequently accessed properties to prevent synchronous C++ calls
+    // Every QML binding that accesses subsystemManager.systemHealthState was making a
+    // synchronous call into C++, blocking the render thread
+    property string cachedSystemHealthState: "UNKNOWN"
+    property real cachedSystemHealthScore: 100.0
+    property int cachedActiveFaults: 0
+    
+    // Update cache periodically instead of on every access
+    Timer {
+        interval: 200  // Update cache every 200ms (5Hz is plenty for UI)
+        running: true
+        repeat: true
+        onTriggered: {
+            cachedSystemHealthState = subsystemManager.systemHealthState
+            cachedSystemHealthScore = subsystemManager.systemHealthScore
+            cachedActiveFaults = subsystemManager.faultManager.totalActiveFaults
+        }
+        Component.onCompleted: {
+            // Initialize immediately
+            cachedSystemHealthState = subsystemManager.systemHealthState
+            cachedSystemHealthScore = subsystemManager.systemHealthScore
+            cachedActiveFaults = subsystemManager.faultManager.totalActiveFaults
+        }
+    }
+    
     // Header bar
     Rectangle {
         id: header
@@ -98,10 +123,10 @@ ApplicationWindow {
                         width: RadarTheme.healthIndicatorLarge
                         height: RadarTheme.healthIndicatorLarge
                         radius: width / 2
-                        color: RadarColors.getHealthColor(subsystemManager.systemHealthState)
+                        color: RadarColors.getHealthColor(cachedSystemHealthState)
                         
                         SequentialAnimation on opacity {
-                            running: subsystemManager.systemHealthState === "FAIL"
+                            running: cachedSystemHealthState === "FAIL"
                             loops: Animation.Infinite
                             NumberAnimation { to: 0.4; duration: 500 }
                             NumberAnimation { to: 1.0; duration: 500 }
@@ -116,11 +141,11 @@ ApplicationWindow {
                             color: RadarColors.textTertiary
                         }
                         Text {
-                            text: subsystemManager.systemHealthState
+                            text: cachedSystemHealthState
                             font.family: RadarTheme.fontFamily
                             font.pixelSize: RadarTheme.fontSizeMedium
                             font.bold: true
-                            color: RadarColors.getHealthColor(subsystemManager.systemHealthState)
+                            color: RadarColors.getHealthColor(cachedSystemHealthState)
                         }
                     }
                 }
@@ -134,7 +159,7 @@ ApplicationWindow {
                         color: RadarColors.textTertiary
                     }
                     Text {
-                        text: subsystemManager.systemHealthScore.toFixed(1) + "%"
+                        text: cachedSystemHealthScore.toFixed(1) + "%"
                         font.family: RadarTheme.fontFamilyMono
                         font.pixelSize: RadarTheme.fontSizeLarge
                         font.bold: true
@@ -151,11 +176,11 @@ ApplicationWindow {
                         color: RadarColors.textTertiary
                     }
                     Text {
-                        text: subsystemManager.faultManager.totalActiveFaults
+                        text: cachedActiveFaults
                         font.family: RadarTheme.fontFamilyMono
                         font.pixelSize: RadarTheme.fontSizeLarge
                         font.bold: true
-                        color: subsystemManager.faultManager.totalActiveFaults > 0 
+                        color: cachedActiveFaults > 0 
                                ? RadarColors.healthFail : RadarColors.textPrimary
                     }
                 }

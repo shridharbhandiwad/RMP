@@ -1,6 +1,7 @@
 #include "core/RadarSubsystem.h"
 #include <QMutexLocker>
 #include <QTimer>
+#include <QDateTime>
 
 namespace RadarRMP {
 
@@ -15,17 +16,38 @@ RadarSubsystem::RadarSubsystem(const QString& id, const QString& name,
     , m_enabled(true)
     , m_processingHealth(false)
     , m_healthUpdatePending(false)
+    , m_pendingHealthSignal(false)
+    , m_pendingTelemetrySignal(false)
+    , m_lastHealthSignalTime(0)
+    , m_lastTelemetrySignalTime(0)
 {
     m_telemetryData = new TelemetryData(this);
     
     // NOTE: We no longer automatically trigger processHealthData from telemetry changes
     // This prevents cascading signal emissions. processHealthData is called explicitly
     // after all data updates are complete in updateData().
-    connect(m_telemetryData, &TelemetryData::dataChanged,
-            this, &RadarSubsystem::telemetryChanged,
-            Qt::QueuedConnection);  // Use queued to batch updates
+    // REMOVED direct signal connection to prevent signal storms
     
     m_description = subsystemTypeToString(type);
+    
+    // Create debounce timer for batched signal emission
+    m_signalDebounceTimer = new QTimer(this);
+    m_signalDebounceTimer->setSingleShot(true);
+    m_signalDebounceTimer->setInterval(SIGNAL_DEBOUNCE_MS);
+    connect(m_signalDebounceTimer, &QTimer::timeout, this, [this]() {
+        // Emit any pending signals in batch
+        if (m_pendingHealthSignal) {
+            m_pendingHealthSignal = false;
+            m_lastHealthSignalTime = QDateTime::currentMSecsSinceEpoch();
+            emit healthChanged();
+        }
+        if (m_pendingTelemetrySignal) {
+            m_pendingTelemetrySignal = false;
+            m_lastTelemetrySignalTime = QDateTime::currentMSecsSinceEpoch();
+            emit telemetryChanged();
+        }
+    });
+    
     initializeTelemetryParameters();
 }
 
@@ -275,6 +297,21 @@ void RadarSubsystem::updateData(const QVariantMap& data)
 {
     m_telemetryData->setValues(data);
     onDataUpdate(data);
+    
+    // Schedule debounced telemetry signal
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if ((now - m_lastTelemetrySignalTime) >= SIGNAL_DEBOUNCE_MS) {
+        // Enough time has passed, emit immediately
+        m_lastTelemetrySignalTime = now;
+        emit telemetryChanged();
+    } else {
+        // Too soon, schedule for later
+        m_pendingTelemetrySignal = true;
+        if (!m_signalDebounceTimer->isActive()) {
+            m_signalDebounceTimer->start();
+        }
+    }
+    
     processHealthData();
 }
 
@@ -310,7 +347,19 @@ void RadarSubsystem::processHealthData()
     }
     
     if (stateChanged || scoreChanged) {
-        emit healthChanged();
+        // Use debounced signal emission to prevent storms
+        qint64 now = QDateTime::currentMSecsSinceEpoch();
+        if ((now - m_lastHealthSignalTime) >= SIGNAL_DEBOUNCE_MS) {
+            // Enough time has passed, emit immediately
+            m_lastHealthSignalTime = now;
+            emit healthChanged();
+        } else {
+            // Too soon, schedule for later
+            m_pendingHealthSignal = true;
+            if (!m_signalDebounceTimer->isActive()) {
+                m_signalDebounceTimer->start();
+            }
+        }
     }
     
     m_processingHealth = false;

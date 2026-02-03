@@ -134,6 +134,14 @@ protected:
     bool m_processingHealth;
     bool m_healthUpdatePending;
     
+    // Signal debouncing to prevent signal storms
+    QTimer* m_signalDebounceTimer;
+    bool m_pendingHealthSignal;
+    bool m_pendingTelemetrySignal;
+    qint64 m_lastHealthSignalTime;
+    qint64 m_lastTelemetrySignalTime;
+    static constexpr int SIGNAL_DEBOUNCE_MS = 50;  // Minimum 50ms between signals
+    
     static constexpr int MAX_FAULT_HISTORY = 1000;
 };
 
