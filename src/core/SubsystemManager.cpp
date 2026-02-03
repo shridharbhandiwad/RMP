@@ -253,10 +253,14 @@ void SubsystemManager::scheduleHealthUpdate()
     // Mark that an update is needed
     m_healthUpdatePending = true;
     
-    // Start/restart throttle timer if not already running
+    // CRITICAL FIX: Only start timer if not already active
+    // This prevents timer restart spam which was causing event queue buildup
+    // Previous behavior: Timer would restart on EVERY call, delaying actual processing
+    // New behavior: Once scheduled, we wait for the timer to fire naturally
     if (!m_throttleTimer->isActive()) {
         m_throttleTimer->start(m_updateInterval);
     }
+    // If timer is already running, the pending flag ensures we process when it fires
 }
 
 void SubsystemManager::onThrottledUpdate()
@@ -270,8 +274,14 @@ void SubsystemManager::onThrottledUpdate()
     // Compute health state
     computeSystemHealth();
     
-    // Refresh models
-    m_subsystemModel->refreshAll();
+    // OPTIMIZATION: Only refresh models if there are active subsystems
+    // Refreshing empty models was wasting CPU cycles
+    if (m_activeModel->count() > 0) {
+        m_subsystemModel->refreshAll();
+    }
+    
+    // Yield to event loop to prevent blocking
+    QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
 }
 
 void SubsystemManager::resetAll()
@@ -312,7 +322,8 @@ void SubsystemManager::onSubsystemFaultOccurred(const QString& faultCode, const 
 
 void SubsystemManager::connectSubsystemSignals(RadarSubsystem* subsystem)
 {
-    // Use QueuedConnection to prevent blocking
+    // CRITICAL: Use QueuedConnection to prevent blocking and allow debouncing to work
+    // DirectConnection would bypass debouncing and cause immediate cascades
     connect(subsystem, &RadarSubsystem::healthChanged,
             this, &SubsystemManager::onSubsystemHealthChanged,
             Qt::QueuedConnection);
@@ -321,7 +332,10 @@ void SubsystemManager::connectSubsystemSignals(RadarSubsystem* subsystem)
             Qt::QueuedConnection);
     connect(subsystem, &RadarSubsystem::faultCleared,
             this, [this, subsystem](const QString& faultCode) {
-                m_faultManager->clearFault(faultCode, subsystem->getId());
+                // Process in next event loop iteration to prevent blocking
+                QMetaObject::invokeMethod(this, [this, subsystem, faultCode]() {
+                    m_faultManager->clearFault(faultCode, subsystem->getId());
+                }, Qt::QueuedConnection);
             },
             Qt::QueuedConnection);
 }

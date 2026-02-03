@@ -100,21 +100,28 @@ int main(int argc, char *argv[])
     UptimeTracker* uptimeTracker = new UptimeTracker();
     
     // Register subsystems with uptime tracker
+    // NOTE: Removed expensive lambda connections that were causing signal storms
+    // The lambdas were executing on every telemetry change (10 subsystems * 1Hz = constant pressure)
+    // UptimeTracker and TrendAnalyzer should poll data periodically instead of reacting to every change
     for (auto* sub : subsystemManager->getAllSubsystems()) {
         uptimeTracker->registerSubsystem(sub->getId());
         
-        // Connect health changes to uptime tracker
-        QObject::connect(sub, &RadarSubsystem::healthChanged,
-                        [uptimeTracker, sub]() {
-                            uptimeTracker->updateState(sub->getId(), sub->getHealthState());
-                        });
-        
-        // Connect to trend analyzer
-        QObject::connect(sub, &RadarSubsystem::telemetryChanged,
-                        [trendAnalyzer, sub]() {
-                            trendAnalyzer->addDataPoints(sub->getId(), sub->getTelemetry());
-                        });
+        // REMOVED: Direct lambda connections that caused event loop saturation
+        // These were triggering synchronous calls in the GUI thread on every update
+        // Solution: Analytics components should poll on their own timer (see below)
     }
+    
+    // Create a low-frequency update timer for analytics (only update every 5 seconds)
+    QTimer* analyticsTimer = new QTimer(&app);
+    analyticsTimer->setInterval(5000);  // 5 seconds - analytics don't need real-time updates
+    QObject::connect(analyticsTimer, &QTimer::timeout, [&]() {
+        // Batch update all analytics in one go
+        for (auto* sub : subsystemManager->getAllSubsystems()) {
+            uptimeTracker->updateState(sub->getId(), sub->getHealthState());
+            trendAnalyzer->addDataPoints(sub->getId(), sub->getTelemetry());
+        }
+    });
+    analyticsTimer->start();
     
     // Create QML engine
     QQmlApplicationEngine engine;
