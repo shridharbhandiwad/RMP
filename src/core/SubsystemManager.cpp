@@ -1,4 +1,5 @@
 #include "core/SubsystemManager.h"
+#include <QCoreApplication>
 
 namespace RadarRMP {
 

@@ -2,6 +2,7 @@
 #include "core/SubsystemManager.h"
 #include "core/RadarSubsystem.h"
 #include <QRandomGenerator>
+#include <QCoreApplication>
 
 namespace RadarRMP {
 
